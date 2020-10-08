@@ -1,0 +1,77 @@
+Block = { Statement ~ (Divider ~ Statement)* }
+
+WrappedBlock = _{ "{" ~ Block ~ "}"}
+
+Statement = { WhileLoop | ForLoop | Conditional | WrappedBlock | Assignment | Expr | LineComment }
+
+Assignment = { Ident ~ (ImplizitAssignmentOp | (ExplizitAssignmentOp ~ Expr)) }
+
+ForLoop = { "for" ~ Ident ~ "in" ~ Expr ~ WrappedBlock}
+
+WhileLoop = { "while" ~ Expr ~ WrappedBlock}
+
+Conditional = {If ~ Elif* ~ Else?}
+
+If = _{ "if" ~ Expr ~ WrappedBlock }
+
+Elif = _{ "elif" ~ Expr ~ WrappedBlock }
+
+Else = _{ "else" ~ WrappedBlock }
+
+Var = { Ident }
+
+Expr = { UnaryExpr ~ (Operator ~ UnaryExpr)* }
+
+UnaryExpr = { UnaryLOp ~ Term | Term ~ UnaryROp | Term ~ GetIndex | Term ~ ChainedCall | Term }
+
+ImplizitAssignmentOp = { "++" | "--"}
+
+ExplizitAssignmentOp = { "=" | "*=" | "/=" | "+=" | "-=" }
+
+GetIndex = { "[" ~ Expr ~ "]" }
+
+ChainedCall = { "(" ~ Arguments? ~ ")" }
+
+UnaryLOp = { "-" | "+" | "!" }
+
+UnaryROp = { "!" | "--" | "++" }
+
+Operator = { "+" | "-" | ("**") | ("//") | "*" | "/" | "%" | "^" | "==" | "<=" | ">=" | "<" | ">" }
+
+Term = { Range | Literal | "(" ~ Expr ~ ")" | Call | Var  }
+
+Range = { (Int | Var) ~ ".." ~ (Int | Var) }
+
+Call = { Ident ~ "(" ~ Arguments? ~ ")" }
+
+Arguments = _{ Expr ~ ( "," ~ Expr)* }
+
+Literal = { Float | Int | String | Bool | Array | Function }
+
+Function = { "(" ~ FunctionParams? ~ ")" ~ "->" ~ WrappedBlock }
+
+FunctionParams = { FunctionParam ~ ("," ~ FunctionParam)* }
+
+FunctionParam = { Ident ~ OptionalMarker? }
+
+OptionalMarker = _{ "=" ~ (Literal | Var)}
+
+Array = { "[" ~ (Arguments | Range)? ~ "]"}
+
+Int = @{ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* | "0" }
+
+Float = @{ Int? ~ "." ~ ASCII_DIGIT+ }
+
+Bool = @{ "false" | "true" }
+
+Ident = @{ "$"? ~ ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_")* }
+
+String = @{ "\"" ~ StringContent? ~ "\""}
+
+StringContent = _{ ( !"\"" ~ ANY)*  }
+
+WHITESPACE = _{ " " | "\t" }
+
+LineComment = { "#" ~ (!Divider ~ ANY)* }
+
+Divider = _{ "\n" | ";" | EOI }
