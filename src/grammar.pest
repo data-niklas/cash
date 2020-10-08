@@ -46,7 +46,7 @@ Call = { Ident ~ "(" ~ Arguments? ~ ")" }
 
 Arguments = _{ Expr ~ ( "," ~ Expr)* }
 
-Literal = { Float | Int | String | Bool | Array | Function }
+Literal = { Float | Int | String | Bool | None | Array | Function }
 
 Function = { "(" ~ FunctionParams? ~ ")" ~ "->" ~ WrappedBlock }
 
@@ -63,6 +63,8 @@ Int = @{ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* | "0" }
 Float = @{ Int? ~ "." ~ ASCII_DIGIT+ }
 
 Bool = @{ "false" | "true" }
+
+None = @{ "none" }
 
 Ident = @{ "$"? ~ ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_")* }
 

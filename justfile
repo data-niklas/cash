@@ -1,6 +1,9 @@
 install:
     cp ./target/debug/cash $SCRIPTS/bin/
 
+installr:
+    cp ./target/release/cash $SCRIPTS/bin/
+
 build:
     cargo build
 

@@ -29,9 +29,15 @@ lazy_static! {
         m.insert("rand", "Returns a random value between 0 and 1");
 
         //Type
+        m.insert("type", "Returns the type of the value");
+        //Casting
+        m.insert("int", "Attempts to cast a value to an int");
+        m.insert("string", "Attempts to cast a value to an int");
+        m.insert("float", "Attempts to cast a value to an int");
+        m.insert("bool", "Attempts to cast a value to an int");
+        
         m.insert("print", "Prints all args after each other");
         m.insert("println", "Prints all args after each other and inserts newlines");
-        m.insert("type", "Returns the type of the value");
         m.insert("vars", "Print all vars");
         m.insert("len", "Length of an array / string");
 

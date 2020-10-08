@@ -29,6 +29,9 @@ pub fn eval(rule: &Node, runtime: &Runtime, ctx: &Context) -> Result {
         Rule::Float => {
             return Result::Float(val.parse::<f64>().unwrap());
         }
+        Rule::None => {
+            return Result::None;
+        }
         Rule::Array => {
             return eval_array(rule.inner(), runtime, ctx);
         }
@@ -316,14 +319,26 @@ fn eval_call(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
         }
 
         //Types
+        "type" => {
+            return Result::String(eval(iter.next().unwrap(),runtime,ctx).typename());
+        }
+        "int" => {
+            return cast_int(eval(iter.next().unwrap(),runtime,ctx));
+        }
+        "float" => {
+            return cast_float(eval(iter.next().unwrap(),runtime,ctx));
+        }
+        "bool" => {
+            return cast_bool(eval(iter.next().unwrap(),runtime,ctx));
+        }
+        "string" => {
+            return cast_string(eval(iter.next().unwrap(),runtime,ctx));
+        }
         "print" => {
             return print(iter, runtime, ctx);
         }
         "println" => {
             return println(iter, runtime, ctx);
-        }
-        "type" => {
-            return Result::String(eval(iter.next().unwrap(),runtime,ctx).typename());
         }
         "len" => {
             return len(eval(iter.next().unwrap(), runtime, ctx));

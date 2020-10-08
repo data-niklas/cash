@@ -113,3 +113,63 @@ pub fn get_index(input: Result, index: Result, runtime: &Runtime, ctx: &Context)
     }
     return Result::None;
 }
+
+
+//Casting
+pub fn cast_int(input: Result) -> Result{
+    match input{
+        Result::Int(i) => {
+            return Result::Int(i);
+        }
+        Result::Float(f) => {
+            return Result::Int(f as i64);
+        }
+        Result::String(t) => {
+            return Result::Int(t.parse::<i64>().unwrap());
+        }
+        Result::Bool(b) => {
+            return Result::Int(if b {1} else {0});
+        }
+        _ => {
+            return Result::Error("May not cast type ".to_string() + input.typename().as_str() + " to int");
+        }
+    }
+}
+
+pub fn cast_float(input: Result) -> Result{
+    match input{
+        Result::Int(i) => {
+            return Result::Float(i as f64);
+        }
+        Result::Float(f) => {
+            return Result::Float(f);
+        }
+        Result::String(t) => {
+            return Result::Float(t.parse::<f64>().unwrap());
+        }
+        Result::Bool(b) => {
+            return Result::Float(if b {1.0} else {0.0});
+        }
+        _ => {
+            return Result::Error("May not cast type ".to_string() + input.typename().as_str() + " to float");
+        }
+    }
+}
+
+pub fn cast_string(input: Result) -> Result{
+    return Result::String(input.to_string());
+}
+
+pub fn cast_bool(input: Result) -> Result{
+    match input{
+        Result::String(t) => {
+            return Result::Bool(t.parse::<bool>().unwrap());
+        }
+        Result::Bool(b) => {
+            return Result::Bool(b);
+        }
+        _ => {
+            return Result::Error("May not cast type ".to_string() + input.typename().as_str() + " to bool");
+        }
+    }
+}
