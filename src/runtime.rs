@@ -8,6 +8,7 @@ use linefeed::terminal::DefaultTerminal;
 use linefeed::{Interface, Signal};
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Runtime<'a> {
     pub interface: Arc<Interface<DefaultTerminal>>,
     pub basectx: Context<'a>,
@@ -95,5 +96,15 @@ impl<'a> Runtime<'a> {
     pub fn quit(&self) {
         //Cleanup
         std::process::exit(0);
+    }
+
+    pub fn which(name: &str) -> Result<std::path::PathBuf>{
+        for mut path in std::env::split_paths(&std::env::var_os("PATH").unwrap()) {
+            path.push(name);
+            if path.exists(){
+                return Ok(path);
+            }
+        }
+        return Err(anyhow!("Could not find file in path"));
     }
 }

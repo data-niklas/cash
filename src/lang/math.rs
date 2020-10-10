@@ -1,12 +1,17 @@
 use crate::result::Result;
+use std::collections::HashMap;
 
 pub fn negate(input: Result) -> Result{
     if let Result::Bool(b) = input {
         return Result::Bool(!b);
-    } else if let Result::Error(e) = input {
+    }else if let Result::Int(i) = input {
+        return Result::Int(i*-1);
+    }else if let Result::Float(f) = input {
+        return Result::Float(f*-1.0);
+    }  else if let Result::Error(e) = input {
         return Result::Error(e);
     } else {
-        return Result::Error("Only Bools may be negated".to_string());
+        return Result::Error("Only Bools, ints and floats may be negated".to_string());
     }
 }
 
@@ -50,6 +55,14 @@ pub fn compare(lhs: &Result, rhs: &Result) -> Result{
             return Result::Error(e.to_string());
         } else {
             return Result::Error("Can only compare arrays with each other".to_string());
+        }
+    } else if let Result::Dict(a1) = lhs {
+        if let Result::Dict(a2) = rhs {
+            return compare_dict(a1,a2);
+        } else if let Result::Error(e) = rhs {
+            return Result::Error(e.to_string());
+        } else {
+            return Result::Error("Can only compare dicts with each other".to_string());
         }
     } else {
         return lhs.clone();
@@ -126,6 +139,35 @@ pub fn compare_array(a1: &Vec<Result>, a2: &Vec<Result>) -> Result{
         return Result::Int(0);
     }
     else if a1.len() < a2.len(){
+        return Result::Int(-1);
+    }
+    else{
+        return Result::Int(1);
+    }
+}
+
+pub fn compare_dict(m1: &HashMap<String,Result>, m2: &HashMap<String,Result>) -> Result{
+    if m1.len() == m2.len(){
+        for (key,value) in m1{
+            let res = compare(value, &m2[key]);
+            if let Result::Int(int) = res{
+                if int == -1{
+                    return Result::Int(-1);
+                }
+                else if int == 1{
+                    return Result::Int(1);
+                }
+            }
+            else if let Result::Error(e) = res{
+                return Result::Error(e);
+            }
+            else{
+                return Result::Error("Could not compare both dicts".to_string());
+            }
+        }
+        return Result::Int(0);
+    }
+    else if m1.len() < m2.len(){
         return Result::Int(-1);
     }
     else{
@@ -237,12 +279,21 @@ pub fn add(mut lhs: Result, rhs: Result) -> Result{
         }
         lhs = Result::Array(a1);
     }
+    else if let Result::Dict(mut m1) = lhs{
+        if let Result::Dict(m2) = rhs{
+            for (key,value) in m2{
+                m1.insert(key, value);
+            }
+            return Result::Dict(m1);
+        }
+        lhs = Result::Dict(m1);
+    }
     if let Result::Error(e) = lhs {
         return Result::Error(e);
     } else if let Result::Error(e) = rhs {
         return Result::Error(e);
     } else {
-        return Result::Error("May only add numbers".to_string());
+        return Result::Error("Could not add ".to_string() + lhs.typename().as_str() + " and " + rhs.to_string().as_str());
     }
 }
 

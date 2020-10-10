@@ -2,9 +2,11 @@ Block = { Statement ~ (Divider ~ Statement)* }
 
 WrappedBlock = _{ "{" ~ Block ~ "}"}
 
-Statement = { WhileLoop | ForLoop | Conditional | WrappedBlock | Assignment | Expr | LineComment }
+Statement = { Async? ~ (WhileLoop | ForLoop | Conditional | WrappedBlock | Assignment | Expr | LineComment) }
 
-Assignment = { Ident ~ (ImplizitAssignmentOp | (ExplizitAssignmentOp ~ Expr)) }
+Async = { "async" }
+
+Assignment = { Ident ~ GetIndex? ~ (ImplizitAssignmentOp | (ExplizitAssignmentOp ~ Expr)) }
 
 ForLoop = { "for" ~ Ident ~ "in" ~ Expr ~ WrappedBlock}
 
@@ -36,7 +38,7 @@ UnaryLOp = { "-" | "+" | "!" }
 
 UnaryROp = { "!" | "--" | "++" }
 
-Operator = { "+" | "-" | ("**") | ("//") | "*" | "/" | "%" | "^" | "==" | "<=" | ">=" | "<" | ">" }
+Operator = { "+" | "-" | ("**") | ("//") | "*" | "/" | "%" | "^" | "==" | "<=" | ">=" | "<" | ">" | "|" }
 
 Term = { Range | Literal | "(" ~ Expr ~ ")" | Call | Var  }
 
@@ -46,7 +48,7 @@ Call = { Ident ~ "(" ~ Arguments? ~ ")" }
 
 Arguments = _{ Expr ~ ( "," ~ Expr)* }
 
-Literal = { Float | Int | String | Bool | None | Array | Function }
+Literal = { Float | Int | String | Bool | None | Array | Dict | Function }
 
 Function = { "(" ~ FunctionParams? ~ ")" ~ "->" ~ WrappedBlock }
 
@@ -56,7 +58,13 @@ FunctionParam = { Ident ~ OptionalMarker? }
 
 OptionalMarker = _{ "=" ~ (Literal | Var)}
 
-Array = { "[" ~ (Arguments | Range)? ~ "]"}
+Dict = { "{" ~ Pairs? ~ "}" }
+
+Pairs = _{ Pair ~ ("," ~ Pair)* }
+
+Pair = { (Ident | String) ~ ":" ~ Expr }
+
+Array = { "[" ~ Arguments? ~ "]"}
 
 Int = @{ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* | "0" }
 
@@ -68,9 +76,15 @@ None = @{ "none" }
 
 Ident = @{ "$"? ~ ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_")* }
 
-String = @{ "\"" ~ StringContent? ~ "\""}
+String = ${ "\"" ~ StringContent ~ "\""}
 
-StringContent = _{ ( !"\"" ~ ANY)*  }
+StringContent = _{ ( Interpolation | Escape | Text)* }
+
+Escape = { "\\" ~ (("x" ~ ASCII_HEX_DIGIT{1,4}) | ANY) }
+
+Text = { (!("\"" | Interpolation | Escape) ~ ANY)+ }
+
+Interpolation = { "${" ~ Expr ~"}"}
 
 WHITESPACE = _{ " " | "\t" }
 

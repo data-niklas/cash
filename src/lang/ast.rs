@@ -1,5 +1,5 @@
 use crate::interpreter::Rule;
-use pest::iterators::{Pair,Pairs};
+use pest::iterators::{Pair};
 
 #[derive(Debug, Clone)]
 pub struct Node{

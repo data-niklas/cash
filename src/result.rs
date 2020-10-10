@@ -17,6 +17,7 @@ pub enum Result{
     Error(String),
     String(String),
     Array(Vec<Result>),
+    Dict(HashMap<String,Result>),
     Function{
         block: Node,
         parameters: Vec<Parameter>,
@@ -50,6 +51,9 @@ impl Result{
             Result::Array(_) => {
                 return "array".to_string();
             }
+            Result::Dict(_) => {
+                return "dict".to_string();
+            }
             Result::None | _ => {
                 return "none".to_string();
             }
@@ -71,6 +75,9 @@ impl Result{
                 println!("{}", txt);
             }
             Result::Array(_) => {
+                println!("{}", self.to_string());
+            }
+            Result::Dict(_) => {
                 println!("{}", self.to_string());
             }
             Result::Error(e) => {
@@ -100,6 +107,15 @@ impl Result{
                 txt += " ]";
                 return "[".to_string() + &txt[1..];
             }
+            Result::Dict(map) => {
+                let mut txt = String::new();
+                for (key,result) in map{
+                    txt += ", ";
+                    txt = txt + key.to_string().as_str() + ": " + result.to_string().as_str()                    
+                }
+                txt += " }";
+                return "{".to_string() + &txt[1..];
+            }
             Result::Float(txt) => {
                 return txt.to_string();
             }
@@ -109,4 +125,10 @@ impl Result{
             _ => {return "".to_string();}
         }
     }
+}
+
+#[derive(Debug)]
+pub enum ExprResult<'a>{
+    Result(Result),
+    Node(&'a Node)
 }

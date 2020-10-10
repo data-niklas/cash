@@ -15,13 +15,15 @@ pub use typefunctions::*;
 
 
 pub fn print_help(args: &Vec<Node>, runtime: &Runtime, ctx: &Context){
-    if let Some(pair) = args.first(){
+    if let Some(pair) = args.get(1){
         let stringresult = eval(pair, runtime, ctx);
         if let Result::String(txt) = stringresult{
-            if FUNCTIONS.contains_key(txt.as_str()) {
-                println!("\x1b[1m{}\x1b[0m\t{}",txt,FUNCTIONS.get(txt.as_str()).unwrap());
-                return;
+            for (key,val) in FUNCTIONS.iter(){
+                if key.contains(txt.as_str()){
+                    println!("\x1b[1m{}\x1b[0m\t{}",key,val);
+                }
             }
+            return;
         }
     }
     for (key,val) in FUNCTIONS.iter(){

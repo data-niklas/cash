@@ -1,48 +1,39 @@
-use crate::result::Result;
 use super::super::*;
+use crate::result::Result;
 
-pub fn print(args: std::slice::Iter<Node>, runtime: &Runtime, ctx: &Context) -> Result{
-    let mut res: String = String::new();
+pub fn print(args: std::slice::Iter<Node>, runtime: &Runtime, ctx: &Context) -> Result {
     for arg in args {
         let arg = eval(arg, runtime, ctx);
         if let Result::None = arg {
         } else {
-            res += arg.to_string().as_str();
+            print!("{}", arg.to_string());
         }
     }
-    println!("{}",res);
     return Result::None;
 }
 
-pub fn println(args: std::slice::Iter<Node>, runtime: &Runtime, ctx: &Context) -> Result{
-    let mut res: String = String::new();
+pub fn println(args: std::slice::Iter<Node>, runtime: &Runtime, ctx: &Context) -> Result {
     for arg in args {
         let arg = eval(arg, runtime, ctx);
         if let Result::None = arg {
         } else {
-            res += arg.to_string().as_str();
-            res += "\n";
+            println!("{}", arg.to_string());
         }
     }
-    if res.len() > 0 {
-        res.pop();
-    }
-    println!("{}",res);
     return Result::None;
 }
 
-
-pub fn vars(args: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result{
+pub fn vars(args: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
     let mut filter = "".to_owned();
-    if args.len() == 2{
-        if let Result::String(text) = eval(args.get(1).unwrap(),runtime,ctx){
+    if args.len() == 2 {
+        if let Result::String(text) = eval(args.get(1).unwrap(), runtime, ctx) {
             filter = text.clone();
         }
     }
     let mut matched = Vec::new();
     let names = ctx.get_all_var_names();
-    for name in names{
-        if name.contains(filter.as_str()){
+    for name in names {
+        if name.contains(filter.as_str()) {
             matched.push(Result::String(name.clone()));
         }
     }
@@ -50,74 +41,179 @@ pub fn vars(args: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result{
     return Result::Array(matched);
 }
 
-pub fn len(input: Result) -> Result{
-    if let Result::String(text) = input{
+pub fn len(input: Result) -> Result {
+    if let Result::String(text) = input {
         return Result::Int(text.len() as i64);
-    }
-    else if let Result::Array(ar) = input{
+    } else if let Result::Array(ar) = input {
         return Result::Int(ar.len() as i64);
-    }
-    else if let Result::Error(e) = input{
+    } else if let Result::Dict(map) = input {
+        return Result::Int(map.len() as i64);
+    } else if let Result::Error(e) = input {
         return Result::Error(e);
-    }
-    else{
+    } else {
         return Result::Error("Len may only be called on arrays or strings".to_string());
     }
 }
 
-pub fn each(array: Result, function: Result, runtime: &Runtime, ctx: &Context) -> Result{
-    if let Result::Array(ar) = array{
-        if let Result::Function{block, parameters, vars} = function{
+pub fn each(array: Result, function: Result, runtime: &Runtime, ctx: &Context) -> Result {
+    if let Result::Array(ar) = array {
+        if let Result::Function {
+            block,
+            parameters,
+            vars,
+        } = function
+        {
             let mut index = 0 as i64;
-            for item in ar{
+            for item in ar {
                 let mut itemar = Vec::new();
                 itemar.push(item);
                 itemar.push(Result::Int(index));
                 exec_func(itemar.iter(), &block, &parameters, &vars, runtime, ctx);
-                index+=1;
+                index += 1;
             }
             return Result::None;
-        }
-        else if let Result::Error(e) = function{
+        } else if let Result::Error(e) = function {
             return Result::Error(e);
-        } 
-    }
-    else if let Result::Error(e) = array{
+        }
+    } else if let Result::Dict(map) = array {
+        if let Result::Function {
+            block,
+            parameters,
+            vars,
+        } = function
+        {
+            let mut index = 0 as i64;
+            for (key, value) in map {
+                let mut itemar = Vec::new();
+                itemar.push(Result::String(key));
+                itemar.push(value);
+                itemar.push(Result::Int(index));
+                exec_func(itemar.iter(), &block, &parameters, &vars, runtime, ctx);
+                index += 1;
+            }
+            return Result::None;
+        } else if let Result::Error(e) = function {
+            return Result::Error(e);
+        }
+    } else if let Result::Error(e) = array {
         return Result::Error(e);
     }
-    return Result::Error("Len may only be called on arrays or strings".to_string());
+    return Result::Error("Each may only be called on arrays or strings".to_string());
 }
 
-pub fn get_index(input: Result, index: Result, runtime: &Runtime, ctx: &Context) -> Result{
-    if let Result::Array(arr) = input{
-        if let Result::Int(i) = index{
-            return arr[i as usize].clone();
-        }
-        else if let Result::Error(e) = index{
+pub fn map(array: Result, function: Result, runtime: &Runtime, ctx: &Context) -> Result {
+    if let Result::Array(ar) = array {
+        if let Result::Function {
+            block,
+            parameters,
+            vars,
+        } = function
+        {
+            let mut index = 0 as i64;
+            let mut newar = Vec::with_capacity(ar.len());
+            for item in ar {
+                let mut itemar = Vec::new();
+                itemar.push(item);
+                itemar.push(Result::Int(index));
+                newar.push(exec_func(
+                    itemar.iter(),
+                    &block,
+                    &parameters,
+                    &vars,
+                    runtime,
+                    ctx,
+                ));
+                index += 1;
+            }
+            return Result::Array(newar);
+        } else if let Result::Error(e) = function {
             return Result::Error(e);
         }
-        else{
-            return Result::Error("Array may only be index by an int".to_string());
+    } else if let Result::Dict(map) = array {
+        if let Result::Function {
+            block,
+            parameters,
+            vars,
+        } = function
+        {
+            let mut index = 0 as i64;
+            let mut newdict = HashMap::with_capacity(map.len());
+            for (key, value) in map {
+                let mut itemar = Vec::new();
+                itemar.push(Result::String(key.clone()));
+                itemar.push(value);
+                itemar.push(Result::Int(index));
+                newdict.insert(
+                    key,
+                    exec_func(itemar.iter(), &block, &parameters, &vars, runtime, ctx),
+                );
+                index += 1;
+            }
+            return Result::Dict(newdict);
+        } else if let Result::Error(e) = function {
+            return Result::Error(e);
         }
+    } else if let Result::Error(e) = array {
+        return Result::Error(e);
     }
-    else if let Result::String(text) = input{
-        if let Result::Int(i) = index{
-            return Result::String(text.chars().skip(i as usize).take(1).collect());
-        }
-        else if let Result::Error(e) = index{
+    return Result::Error("Map may only be called on arrays or strings".to_string());
+}
+
+pub fn get_index(input: &Result, index: Result) -> Result {
+    if let Result::Array(arr) = input {
+        if let Result::Int(i) = index {
+            return arr[i as usize].clone();
+        } else if let Result::Error(e) = index {
             return Result::Error(e);
+        } else {
+            return Result::Error("Array may only be indexed by an int".to_string());
         }
-        else{
+    } else if let Result::Dict(map) = input {
+        if let Result::String(i) = index {
+            return map[&i].clone();
+        } else if let Result::Error(e) = index {
+            return Result::Error(e);
+        } else {
+            return Result::Error("Dict may only be indexed by a string".to_string());
+        }
+    } else if let Result::String(text) = input {
+        if let Result::Int(i) = index {
+            return Result::String(text.chars().skip(i as usize).take(1).collect());
+        } else if let Result::Error(e) = index {
+            return Result::Error(e);
+        } else {
             return Result::Error("Array may only be index by an int".to_string());
         }
     }
     return Result::None;
 }
 
+pub fn set_index(input: Result, index: Result, value: Result) -> Result {
+    if let Result::Array(mut arr) = input {
+        if let Result::Int(i) = index {
+            arr[i as usize] = value;
+            return Result::Array(arr);
+        } else if let Result::Error(e) = index {
+            return Result::Error(e);
+        } else {
+            return Result::Error("Array may only be indexed by an int".to_string());
+        }
+    } else if let Result::Dict(mut map) = input {
+        if let Result::String(i) = index {
+            map.insert(i, value);
+            return Result::Dict(map);
+        } else if let Result::Error(e) = index {
+            return Result::Error(e);
+        } else {
+            return Result::Error("Dict may only be indexed by a string".to_string());
+        }
+    }
+    return Result::None;
+}
 
 //Casting
-pub fn cast_int(input: Result) -> Result{
-    match input{
+pub fn cast_int(input: Result) -> Result {
+    match input {
         Result::Int(i) => {
             return Result::Int(i);
         }
@@ -128,16 +224,18 @@ pub fn cast_int(input: Result) -> Result{
             return Result::Int(t.parse::<i64>().unwrap());
         }
         Result::Bool(b) => {
-            return Result::Int(if b {1} else {0});
+            return Result::Int(if b { 1 } else { 0 });
         }
         _ => {
-            return Result::Error("May not cast type ".to_string() + input.typename().as_str() + " to int");
+            return Result::Error(
+                "May not cast type ".to_string() + input.typename().as_str() + " to int",
+            );
         }
     }
 }
 
-pub fn cast_float(input: Result) -> Result{
-    match input{
+pub fn cast_float(input: Result) -> Result {
+    match input {
         Result::Int(i) => {
             return Result::Float(i as f64);
         }
@@ -148,20 +246,22 @@ pub fn cast_float(input: Result) -> Result{
             return Result::Float(t.parse::<f64>().unwrap());
         }
         Result::Bool(b) => {
-            return Result::Float(if b {1.0} else {0.0});
+            return Result::Float(if b { 1.0 } else { 0.0 });
         }
         _ => {
-            return Result::Error("May not cast type ".to_string() + input.typename().as_str() + " to float");
+            return Result::Error(
+                "May not cast type ".to_string() + input.typename().as_str() + " to float",
+            );
         }
     }
 }
 
-pub fn cast_string(input: Result) -> Result{
+pub fn cast_string(input: Result) -> Result {
     return Result::String(input.to_string());
 }
 
-pub fn cast_bool(input: Result) -> Result{
-    match input{
+pub fn cast_bool(input: Result) -> Result {
+    match input {
         Result::String(t) => {
             return Result::Bool(t.parse::<bool>().unwrap());
         }
@@ -169,7 +269,9 @@ pub fn cast_bool(input: Result) -> Result{
             return Result::Bool(b);
         }
         _ => {
-            return Result::Error("May not cast type ".to_string() + input.typename().as_str() + " to bool");
+            return Result::Error(
+                "May not cast type ".to_string() + input.typename().as_str() + " to bool",
+            );
         }
     }
 }

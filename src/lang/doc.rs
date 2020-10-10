@@ -35,11 +35,13 @@ lazy_static! {
         m.insert("string", "Attempts to cast a value to an int");
         m.insert("float", "Attempts to cast a value to an int");
         m.insert("bool", "Attempts to cast a value to an int");
-        
+
         m.insert("print", "Prints all args after each other");
         m.insert("println", "Prints all args after each other and inserts newlines");
         m.insert("vars", "Print all vars");
         m.insert("len", "Length of an array / string");
+        m.insert("each", "Executes a function for each value of an array or dict");
+        m.insert("map", "Maps a value of an array or dict via a function");
 
         //Control
         m.insert("quit", "Exits cash");
@@ -48,6 +50,9 @@ lazy_static! {
         m.insert("cls", "Clears the screen");
         m.insert("return", "Returns from the current block and returns up to 1 result");
         m.insert("help", "shows this help or shows the help of a given command");
+
+        //time
+        m.insert("wait", "Waits for x seconds");
         m
     };
 }

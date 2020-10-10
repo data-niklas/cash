@@ -8,8 +8,8 @@ impl<Term: Terminal> Completer<Term> for CashCompleter {
     fn complete(
         &self,
         word: &str,
-        prompter: &Prompter<Term>,
-        start: usize,
+        _prompter: &Prompter<Term>,
+        _start: usize,
         end: usize
     ) -> Option<Vec<Completion>>{
         let chars = word.chars().collect::<Vec<char>>();
