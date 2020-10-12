@@ -5,7 +5,7 @@ use crate::interpreter::Rule;
 use crate::result::Result;
 use crate::runtime::Runtime;
 
-pub fn eval_unary(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_unary(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut iter = inner.iter();
     let first = iter.next().unwrap();
     match first.rule() {
@@ -21,13 +21,13 @@ pub fn eval_unary(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result
                     }
                     Rule::GetIndex => {
                         return get_index(
-                            &eval(first, runtime, ctx),
+                            &eval(first, runtime.clone(), ctx.clone()),
                             eval(second.inner().first().unwrap(), runtime, ctx),
                         );
                     }
                     Rule::ChainedCall => {
                         return eval_chainedcall(
-                            &eval(first, runtime, ctx),
+                            &eval(first, runtime.clone(), ctx.clone()),
                             &mut second.inner().iter(),
                             runtime,
                             ctx,
@@ -47,7 +47,7 @@ pub fn eval_unary(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result
     }
 }
 
-pub fn match_unarylop(first: &Node, second: &Node, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn match_unarylop(first: &Node, second: &Node, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     match first.content().as_str() {
         "+" => {
             return eval(second, runtime, ctx);
@@ -64,7 +64,7 @@ pub fn match_unarylop(first: &Node, second: &Node, runtime: &Runtime, ctx: &Cont
     }
 }
 
-pub fn match_unaryrop(first: &Node, second: &Node, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn match_unaryrop(first: &Node, second: &Node, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     match second.content().as_str() {
         "!" => {
             // TODO
@@ -102,7 +102,7 @@ pub fn operator_precedence(op: &str) -> usize {
     }
 }
 
-pub fn eval_expr(rules: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_expr(rules: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     const MAXPRECEDENCE: usize = 6;
     let mut operatorprecedence: [Vec<usize>; MAXPRECEDENCE] = [
         Vec::new(),
@@ -113,7 +113,7 @@ pub fn eval_expr(rules: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
         Vec::new(),
     ];
     let mut operators = Vec::<&str>::new();
-    let mut results: Vec<ExprResult> = Vec::new();
+    let mut results: Vec<Result> = Vec::new();
 
     for pair in rules {
         let rule = pair.rule();
@@ -129,7 +129,7 @@ pub fn eval_expr(rules: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
                 operators.push(op);
             }
             Rule::UnaryExpr => {
-                results.push(ExprResult::Node(pair));
+                results.push(eval_unary(pair.inner(), runtime.clone(),ctx.clone()));
             }
             _ => {}
         }
@@ -139,28 +139,11 @@ pub fn eval_expr(rules: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
     loop {
         let vec = &operatorprecedence[i];
         for j in vec.iter() {
-            let op = operators[*j];
+            let op = operators.remove(*j);
             let lhs = results.remove(*j);
             let rhs = results.remove(*j);
 
-            let lhsr: Result;
-            let rhsr: Result;
-            if let ExprResult::Result(e) = lhs {
-                lhsr = e;
-            } else if let ExprResult::Node(n) = lhs {
-                lhsr = eval_unary(n.inner(), runtime, ctx);
-            } else {
-                lhsr = Result::Error("Error in evaluating the expression".to_string());
-            }
-
-            if let ExprResult::Result(e) = rhs {
-                rhsr = e;
-            } else if let ExprResult::Node(n) = rhs {
-                rhsr = eval_unary(n.inner(), runtime, ctx);
-            } else {
-                rhsr = Result::Error("Error in evaluating the expression".to_string());
-            }
-            results.insert(*j, ExprResult::Result(make_result(op, lhsr, rhsr)));
+            results.insert(*j, make_result(op, lhs, rhs));
         }
         if i == 0 {
             break;
@@ -168,13 +151,7 @@ pub fn eval_expr(rules: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
         i -= 1;
     }
     let first = results.remove(0);
-    if let ExprResult::Result(res) = first {
-        return res;
-    } else if let ExprResult::Node(node) = first {
-        return eval_unary(node.inner(), runtime, ctx);
-    } else {
-        return Result::Error("Expression could not be evaluated".to_string());
-    }
+    return first;
 }
 
 fn make_result(op: &str, lhs: Result, rhs: Result) -> Result {

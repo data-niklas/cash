@@ -67,7 +67,7 @@ impl Pipe {
 
 
 
-pub fn eval_pipe(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result{
+pub fn eval_pipe(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result{
     let mut pipe: Option<Pipe> = None;
     let mut i = 0;
     let mut capture = false;
@@ -81,7 +81,7 @@ pub fn eval_pipe(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result{
         if let Ok(path) = Runtime::which(name) {
             let mut args = Vec::new();
             for expr in calliter {
-                args.push(eval(expr, runtime, ctx).to_string());
+                args.push(eval(expr, runtime.clone(), ctx.clone()).to_string());
             }
             if let Some(innerpipe) = pipe{
                 let inherit = (i==inner.len()-1) && !capture;

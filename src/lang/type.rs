@@ -1,9 +1,9 @@
 use super::super::*;
 use crate::result::Result;
 
-pub fn print(args: std::slice::Iter<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn print(args: std::slice::Iter<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     for arg in args {
-        let arg = eval(arg, runtime, ctx);
+        let arg = eval(arg, runtime.clone(), ctx.clone());
         if let Result::None = arg {
         } else {
             print!("{}", arg.to_string());
@@ -12,9 +12,9 @@ pub fn print(args: std::slice::Iter<Node>, runtime: &Runtime, ctx: &Context) -> 
     return Result::None;
 }
 
-pub fn println(args: std::slice::Iter<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn println(args: std::slice::Iter<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     for arg in args {
-        let arg = eval(arg, runtime, ctx);
+        let arg = eval(arg, runtime.clone(), ctx.clone());
         if let Result::None = arg {
         } else {
             println!("{}", arg.to_string());
@@ -23,10 +23,10 @@ pub fn println(args: std::slice::Iter<Node>, runtime: &Runtime, ctx: &Context) -
     return Result::None;
 }
 
-pub fn vars(args: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn vars(args: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut filter = "".to_owned();
     if args.len() == 2 {
-        if let Result::String(text) = eval(args.get(1).unwrap(), runtime, ctx) {
+        if let Result::String(text) = eval(args.get(1).unwrap(), runtime, ctx.clone()) {
             filter = text.clone();
         }
     }
@@ -55,14 +55,14 @@ pub fn len(input: Result) -> Result {
     }
 }
 
-pub fn each(array: Result, function: Result, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn each(array: Result, function: Result, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     if let Result::Array(ar) = array {
         let mut index = 0 as i64;
         for item in ar {
             let mut itemar = Vec::new();
             itemar.push(item);
             itemar.push(Result::Int(index));
-            exec_func(itemar.iter(), &function, runtime, ctx);
+            exec_func(itemar.iter(), &function, runtime.clone(), ctx.clone());
             index += 1;
         }
         return Result::None;
@@ -73,7 +73,7 @@ pub fn each(array: Result, function: Result, runtime: &Runtime, ctx: &Context) -
             itemar.push(Result::String(key));
             itemar.push(value);
             itemar.push(Result::Int(index));
-            exec_func(itemar.iter(), &function, runtime, ctx);
+            exec_func(itemar.iter(), &function, runtime.clone(), ctx.clone());
             index += 1;
         }
         return Result::None;
@@ -83,7 +83,7 @@ pub fn each(array: Result, function: Result, runtime: &Runtime, ctx: &Context) -
     return Result::Error("Each may only be called on arrays or strings".to_string());
 }
 
-pub fn map(array: Result, function: Result, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn map(array: Result, function: Result, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     if let Result::Array(ar) = array {
         let mut index = 0 as i64;
         let mut newar = Vec::with_capacity(ar.len());
@@ -91,7 +91,7 @@ pub fn map(array: Result, function: Result, runtime: &Runtime, ctx: &Context) ->
             let mut itemar = Vec::new();
             itemar.push(item);
             itemar.push(Result::Int(index));
-            newar.push(exec_func(itemar.iter(), &function, runtime, ctx));
+            newar.push(exec_func(itemar.iter(), &function, runtime.clone(), ctx.clone()));
             index += 1;
         }
         return Result::Array(newar);
@@ -103,7 +103,7 @@ pub fn map(array: Result, function: Result, runtime: &Runtime, ctx: &Context) ->
             itemar.push(Result::String(key.clone()));
             itemar.push(value);
             itemar.push(Result::Int(index));
-            newdict.insert(key, exec_func(itemar.iter(), &function, runtime, ctx));
+            newdict.insert(key, exec_func(itemar.iter(), &function, runtime.clone(), ctx.clone()));
             index += 1;
         }
         return Result::Dict(newdict);
@@ -115,7 +115,7 @@ pub fn map(array: Result, function: Result, runtime: &Runtime, ctx: &Context) ->
 
 
 
-pub fn join(array: Result, joinstring: Result, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn join(array: Result, joinstring: Result, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     if let Result::Array(ar) = array {
         if let Result::String(text) = joinstring{
             let mut res = String::new();

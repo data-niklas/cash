@@ -6,10 +6,10 @@ use crate::result::{Parameter, Result};
 use crate::runtime::Runtime;
 use std::collections::HashMap;
 
-pub fn eval_block(pairs: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_block(pairs: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut lastres = Result::None;
     for pair in pairs {
-        let res = eval(pair, runtime, ctx);
+        let res = eval(pair, runtime.clone(), ctx.clone());
         if let Result::Return(e) = res {
             return *e;
         } else {
@@ -19,7 +19,7 @@ pub fn eval_block(pairs: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result
     return lastres;
 }
 
-pub fn eval_function(pairs: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_function(pairs: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut iter = pairs.iter();
     let first = iter.next().unwrap();
     let block;
@@ -30,7 +30,7 @@ pub fn eval_function(pairs: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Res
             let ident = inner.first().unwrap().content();
             let mut defaultvalue = None;
             if inner.len() == 2 {
-                defaultvalue = Some(eval(inner.get(1).unwrap(), runtime, ctx));
+                defaultvalue = Some(eval(inner.get(1).unwrap(), runtime.clone(), ctx.clone()));
             }
             params.push(Parameter {
                 defaultvalue: defaultvalue,
@@ -53,18 +53,18 @@ pub fn eval_function(pairs: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Res
     };
 }
 
-pub fn eval_forloop(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_forloop(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut iter = inner.iter();
     let varname = iter.next().unwrap().content().as_str();
-    let range = eval(iter.next().unwrap(), runtime, ctx);
+    let range = eval(iter.next().unwrap(), runtime.clone(), ctx.clone());
     if let Result::Error(e) = range {
         return Result::Error(e);
     } else if let Result::Array(vec) = range {
         let block = iter.next().unwrap();
         for i in vec {
-            let newctx = Context::from_parent(ctx, ctx.me());
+            let newctx = Context::from_parent(&*ctx, ctx.me());
             newctx.set_own_var(varname, i);
-            eval(block, runtime, &newctx);
+            eval(block, runtime.clone(), Arc::new(newctx));
         }
     } else {
         return Result::Error("For loop can only loop over arrays".to_string());
@@ -72,43 +72,43 @@ pub fn eval_forloop(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Resu
     return Result::None;
 }
 
-pub fn eval_whileloop(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_whileloop(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut iter = inner.iter();
     let expr = iter.next().unwrap();
     let block = iter.next().unwrap();
-    while let Result::Bool(true) = eval(expr, runtime, ctx) {
-        let newctx = Context::from_parent(ctx, ctx.me());
-        eval(block, runtime, &newctx);
+    while let Result::Bool(true) = eval(expr, runtime.clone(), ctx.clone()) {
+        let newctx = Context::from_parent(&*ctx, ctx.me());
+        eval(block, runtime.clone(), Arc::new(newctx));
     }
     return Result::None;
 }
 
-pub fn eval_conditional(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_conditional(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut iter = inner.iter();
     let expr = iter.next().unwrap();
-    if let Result::Bool(true) = eval(expr, runtime, ctx) {
-        let newctx = Context::from_parent(ctx, ctx.me());
-        return eval(iter.next().unwrap(), runtime, &newctx);
+    if let Result::Bool(true) = eval(expr, runtime.clone(), ctx.clone()) {
+        let newctx = Context::from_parent(&*ctx, ctx.me());
+        return eval(iter.next().unwrap(), runtime, Arc::new(newctx));
     } else {
         iter.next().unwrap();
         while let Some(node) = iter.next() {
             if let Rule::Expr = node.rule() {
-                if let Result::Bool(true) = eval(node, runtime, ctx) {
-                    let newctx = Context::from_parent(ctx, ctx.me());
-                    return eval(iter.next().unwrap(), runtime, &newctx);
+                if let Result::Bool(true) = eval(node, runtime.clone(), ctx.clone()) {
+                    let newctx = Context::from_parent(&*ctx, ctx.me());
+                    return eval(iter.next().unwrap(), runtime, Arc::new(newctx));
                 } else {
                     iter.next().unwrap();
                 }
             } else {
-                let newctx = Context::from_parent(ctx, ctx.me());
-                return eval(node, runtime, &newctx);
+                let newctx = Context::from_parent(&*ctx, ctx.me());
+                return eval(node, runtime, Arc::new(newctx));
             }
         }
     }
     return Result::None;
 }
 
-pub fn eval_call(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_call(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut iter = inner.iter();
     let func = iter.next().unwrap().content().as_str();
     match func {
@@ -166,7 +166,7 @@ pub fn eval_call(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
         }
         "log" => {
             return log(
-                eval(iter.next().unwrap(), runtime, ctx),
+                eval(iter.next().unwrap(), runtime.clone(), ctx.clone()),
                 eval(iter.next().unwrap(), runtime, ctx),
             );
         }
@@ -216,24 +216,24 @@ pub fn eval_call(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
         }
         "each" => {
             return each(
-                eval(iter.next().unwrap(), runtime, ctx),
-                eval(iter.next().unwrap(), runtime, ctx),
+                eval(iter.next().unwrap(), runtime.clone(), ctx.clone()),
+                eval(iter.next().unwrap(), runtime.clone(), ctx.clone()),
                 runtime,
                 ctx,
             );
         }
         "map" => {
             return map(
-                eval(iter.next().unwrap(), runtime, ctx),
-                eval(iter.next().unwrap(), runtime, ctx),
+                eval(iter.next().unwrap(), runtime.clone(), ctx.clone()),
+                eval(iter.next().unwrap(), runtime.clone(), ctx.clone()),
                 runtime,
                 ctx,
             );
         }
         "join" => {
             return join(
-                eval(iter.next().unwrap(), runtime, ctx),
-                eval(iter.next().unwrap(), runtime, ctx),
+                eval(iter.next().unwrap(), runtime.clone(), ctx.clone()),
+                eval(iter.next().unwrap(), runtime.clone(), ctx.clone()),
                 runtime,
                 ctx,
             );
@@ -271,7 +271,7 @@ pub fn eval_call(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
             }
         }
         "me" => {
-            if let Some(func) = ctx.me() {
+            if let Some(func) = ctx.clone().me() {
                 return eval_chainedcall(func, &mut iter, runtime, ctx);
             } else {
                 return Result::Error("Me no t possible".to_string());
@@ -299,10 +299,10 @@ pub fn eval_call(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
 pub fn call_function(
     name: &str,
     mut iter: std::slice::Iter<Node>,
-    runtime: &Runtime,
-    ctx: &Context,
+    runtime: Arc<Runtime>,
+    ctx: Arc<Context>,
 ) -> Result {
-    let res = eval_chainedcall(&ctx.var(name), &mut iter, runtime, ctx);
+    let res = eval_chainedcall(&ctx.var(name), &mut iter, runtime.clone(), ctx.clone());
     if let Result::Error(e) = res {
         if e == "Term is not a function".to_string() {
             return call_sys_function(name, iter, runtime, ctx);
@@ -315,13 +315,13 @@ pub fn call_function(
 pub fn call_sys_function(
     name: &str,
     iter: std::slice::Iter<Node>,
-    runtime: &Runtime,
-    ctx: &Context,
+    runtime: Arc<Runtime>,
+    ctx: Arc<Context>,
 ) -> Result {
     if let Ok(path) = Runtime::which(name) {
         let mut args = Vec::new();
         for expr in iter {
-            args.push(eval(expr, runtime, ctx).to_string());
+            args.push(eval(expr, runtime.clone(), ctx.clone()).to_string());
         }
         return exec(path, args.iter());
     }
@@ -331,8 +331,8 @@ pub fn call_sys_function(
 pub fn eval_chainedcall(
     input: &Result,
     iter: &mut std::slice::Iter<Node>,
-    runtime: &Runtime,
-    ctx: &Context,
+    runtime: Arc<Runtime>,
+    ctx: Arc<Context>,
 ) -> Result {
     if let Result::Function {
         block,
@@ -340,10 +340,10 @@ pub fn eval_chainedcall(
         vars,
     } = input.clone()
     {
-        let newctx = Context::from_vars(ctx, vars, Some(&input));
+        let newctx = Context::from_vars(&*ctx, vars, Some(&input));
         for param in parameters {
             if let Some(exprnode) = iter.next() {
-                let expr = eval(exprnode, runtime, ctx);
+                let expr = eval(exprnode, runtime.clone(), ctx.clone());
                 newctx.set_own_var(&param.name, expr);
             } else {
                 if let Some(defaultvalue) = param.defaultvalue {
@@ -353,17 +353,17 @@ pub fn eval_chainedcall(
                 }
             }
         }
-        return eval(&block, runtime, &newctx);
+        return eval(&block, runtime, Arc::new(newctx));
     } else {
         return Result::Error("Term is not a function".to_string());
     }
 }
 
-pub fn eval_statementitem(pair: &Node, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_statementitem(pair: &Node, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     match pair.rule() {
         Rule::Block => {
-            let parent: Context = Context::from_parent(ctx, ctx.me());
-            return eval(pair, runtime, &parent);
+            let parent: Context = Context::from_parent(&*ctx, ctx.me());
+            return eval(pair, runtime, Arc::new(parent));
         }
         _ => {
             return eval(pair, runtime, ctx);

@@ -42,6 +42,7 @@ lazy_static! {
         m.insert("len", "Length of an array / string");
         m.insert("each", "Executes a function for each value of an array or dict");
         m.insert("map", "Maps a value of an array or dict via a function");
+        m.insert("join", "Joins an array into a string, using a given delimeter");
 
         //Control
         m.insert("quit", "Exits cash");

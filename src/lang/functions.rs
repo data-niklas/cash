@@ -16,7 +16,7 @@ pub use math::*;
 mod typefunctions;
 pub use typefunctions::*;
 
-pub fn print_help(args: &Vec<Node>, runtime: &Runtime, ctx: &Context) {
+pub fn print_help(args: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) {
     if let Some(pair) = args.get(1) {
         let stringresult = eval(pair, runtime, ctx);
         if let Result::String(txt) = stringresult {
@@ -33,7 +33,7 @@ pub fn print_help(args: &Vec<Node>, runtime: &Runtime, ctx: &Context) {
     }
 }
 
-pub fn change_dir(node: Option<&Node>, runtime: &Runtime, ctx: &Context) {
+pub fn change_dir(node: Option<&Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) {
     if let Some(node) = node{
         if let Result::String(path) = eval(&node,runtime,ctx){
             std::env::set_current_dir(&std::path::Path::new(&path));
@@ -41,18 +41,10 @@ pub fn change_dir(node: Option<&Node>, runtime: &Runtime, ctx: &Context) {
     }
 }
 
-pub fn include_file(node: Option<&Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn include_file(node: Option<&Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     if let Some(node) = node{
-        if let Result::String(pathstring) = eval(&node,runtime,ctx){
-            let cd = std::env::current_dir().unwrap_or_default();
-            let path = std::path::Path::new(&pathstring);
-            std::env::set_current_dir(std::fs::canonicalize(path.parent().unwrap()).unwrap());
-            let mut file = std::fs::File::open(path).unwrap();
-            let mut contents = String::new();
-            file.read_to_string(&mut contents);
-            let res = interpreter::interpret(contents, runtime, ctx);
-            std::env::set_current_dir(cd);
-            if let Ok(res) = res{
+        if let Result::String(pathstring) = eval(&node,runtime.clone(),ctx.clone()){
+            if let Ok(res) = runtime.include_file(std::path::Path::new(pathstring.as_str())){
                 return res;
             }
             else{
@@ -66,8 +58,8 @@ pub fn include_file(node: Option<&Node>, runtime: &Runtime, ctx: &Context) -> Re
 pub fn exec_func(
     mut iter: std::slice::Iter<Result>,
     function: &Result,
-    runtime: &Runtime,
-    ctx: &Context,
+    runtime: Arc<Runtime>,
+    ctx: Arc<Context>,
 ) -> Result {
     if let Result::Function {
         block,
@@ -75,7 +67,7 @@ pub fn exec_func(
         vars,
     } = function
     {
-        let newctx = Context::from_vars(ctx, vars.clone(), Some(function));
+        let newctx = Context::from_vars(&*ctx, vars.clone(), Some(function));
         for param in parameters {
             if let Some(expr) = iter.next() {
                 newctx.set_own_var(&param.name, expr.clone());
@@ -87,7 +79,7 @@ pub fn exec_func(
                 }
             }
         }
-        return eval(&block, runtime, &newctx);
+        return eval(&block, runtime, Arc::new(newctx));
     }
     return Result::Error("Is not a function".to_string());
 }

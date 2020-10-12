@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::interpreter::Rule;
-use crate::result::{ExprResult, Result};
+use crate::result::Result;
 use crate::runtime::Runtime;
 use crate::ast::Node;
 use std::collections::HashMap;
@@ -24,16 +24,19 @@ mod pipe;
 use anyhow;
 use dirs;
 use std::{thread, time};
-
 use functions::*;
 use system::*;
 use block::*;
 use literal::*;
-use util::*;
 use expr::*;
 use pipe::*;
 
-pub fn eval(rule: &Node, runtime: &Runtime, ctx: &Context) -> Result {
+
+pub fn eval_runtime_function(name: &str, runtime: Arc<Runtime>) -> Result{
+    return call_function(name, Vec::new().iter(), runtime.clone(), runtime.basectx.clone());
+}
+
+pub fn eval(rule: &Node, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let val = rule.content();
     match rule.rule {
         Rule::Ident => {
@@ -115,18 +118,18 @@ pub fn eval(rule: &Node, runtime: &Runtime, ctx: &Context) -> Result {
 }
 
 
-pub fn eval_assignment(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_assignment(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut iter = inner.iter();
     let var = iter.next().unwrap().content();
     let next = iter.next().unwrap();
     if let Rule::GetIndex = next.rule() {
         return eval_assignindex(
             var,
-            eval(next.inner().first().unwrap(), runtime, ctx),
+            eval(next.inner().first().unwrap(), runtime.clone(), ctx.clone()),
             iter.next().unwrap().content().as_str(),
             iter.next(),
-            runtime,
-            ctx,
+            runtime.clone(),
+            ctx.clone(),
         );
     }
     let op = next.content().as_str();
@@ -134,19 +137,19 @@ pub fn eval_assignment(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> R
     let val: Result;
     match op {
         "=" => {
-            val = eval(expr.unwrap(), runtime, ctx);
+            val = eval(expr.unwrap(), runtime, ctx.clone());
         }
         "*=" => {
-            val = multiply(ctx.var(var), eval(expr.unwrap(), runtime, ctx));
+            val = multiply(ctx.var(var), eval(expr.unwrap(), runtime, ctx.clone()));
         }
         "/=" => {
-            val = divide(ctx.var(var), eval(expr.unwrap(), runtime, ctx));
+            val = divide(ctx.var(var), eval(expr.unwrap(), runtime, ctx.clone()));
         }
         "+=" => {
-            val = add(ctx.var(var), eval(expr.unwrap(), runtime, ctx));
+            val = add(ctx.var(var), eval(expr.unwrap(), runtime, ctx.clone()));
         }
         "-=" => {
-            val = subtract(ctx.var(var), eval(expr.unwrap(), runtime, ctx));
+            val = subtract(ctx.var(var), eval(expr.unwrap(), runtime, ctx.clone()));
         }
         "++" => {
             val = add(ctx.var(var), Result::Int(1));
@@ -168,8 +171,8 @@ pub fn eval_assignindex(
     index: Result,
     op: &str,
     expr: Option<&Node>,
-    runtime: &Runtime,
-    ctx: &Context,
+    runtime: Arc<Runtime>,
+    ctx: Arc<Context>,
 ) -> Result {
     let val = ctx.var(var);
     if let Result::Error(e) = val {
@@ -182,19 +185,19 @@ pub fn eval_assignindex(
     let newval: Result;
     match op {
         "=" => {
-            newval = eval(expr.unwrap(), runtime, ctx);
+            newval = eval(expr.unwrap(), runtime, ctx.clone());
         }
         "*=" => {
-            newval = multiply(indexval, eval(expr.unwrap(), runtime, ctx));
+            newval = multiply(indexval, eval(expr.unwrap(), runtime, ctx.clone()));
         }
         "/=" => {
-            newval = divide(indexval, eval(expr.unwrap(), runtime, ctx));
+            newval = divide(indexval, eval(expr.unwrap(), runtime, ctx.clone()));
         }
         "+=" => {
-            newval = add(indexval, eval(expr.unwrap(), runtime, ctx));
+            newval = add(indexval, eval(expr.unwrap(), runtime, ctx.clone()));
         }
         "-=" => {
-            newval = subtract(indexval, eval(expr.unwrap(), runtime, ctx));
+            newval = subtract(indexval, eval(expr.unwrap(), runtime, ctx.clone()));
         }
         "++" => {
             newval = add(indexval, Result::Int(1));
@@ -210,10 +213,10 @@ pub fn eval_assignindex(
     return Result::None;
 }
 
-pub fn eval_statement(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_statement(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let pair: &Node;
     let mut isasync: bool = false;
-    let first = inner.first().unwrap();
+    let first = inner.get(0).unwrap();
     if let Rule::Async = first.rule() {
         isasync = true;
         pair = inner.get(1).unwrap();
@@ -221,13 +224,15 @@ pub fn eval_statement(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Re
         pair = first;
     }
     if isasync {
-        let a1 = Arc::clone(&ctx.parent);
-        let a2 = Arc::clone(&ctx.vars);
+        let node = pair.clone();
+        let newruntime = Arc::clone(&runtime);
+        let newctx = Arc::new(Context::from_parent(&*ctx, ctx.node));
         return Result::Error("Threads are not implemented yet".to_string());
     } else {
         return eval_statementitem(pair, runtime, ctx);
     }
 }
+
 
 
 

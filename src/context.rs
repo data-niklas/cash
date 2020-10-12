@@ -12,6 +12,7 @@ pub struct Context<'a> {
     pub node: Option<&'a Result>,
 }
 
+
 impl<'a> Context<'a> {
     pub fn new() -> Context<'a> {
         return Context {

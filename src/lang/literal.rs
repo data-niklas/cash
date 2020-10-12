@@ -15,9 +15,9 @@ pub fn get_home() -> Result{
     }
 }
 
-pub fn eval_range(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_range(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut iter = inner.iter();
-    if let Result::Int(i1) = eval(iter.next().unwrap(), runtime, ctx) {
+    if let Result::Int(i1) = eval(iter.next().unwrap(), runtime.clone(), ctx.clone()) {
         if let Result::Int(i2) = eval(iter.next().unwrap(), runtime, ctx) {
             let mut vec: Vec<Result> = Vec::new();
             for i in i1..i2 {
@@ -30,21 +30,21 @@ pub fn eval_range(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result
 }
 
 
-pub fn eval_array(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_array(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut vec: Vec<Result> = Vec::new();
     for rule in inner {
-        vec.push(eval(&rule, runtime, ctx));
+        vec.push(eval(&rule, runtime.clone(), ctx.clone()));
     }
     return Result::Array(vec);
 }
 
-pub fn eval_dict(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_dict(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut map: HashMap<String, Result> = HashMap::new();
     for pair in inner {
         let first = pair.inner().get(0).unwrap();
-        let txt = eval(&first, runtime, ctx);
+        let txt = eval(&first, runtime.clone(), ctx.clone());
         if let Result::String(txt) = txt {
-            let val = eval(&pair.inner().get(1).unwrap(), runtime, ctx);
+            let val = eval(&pair.inner().get(1).unwrap(), runtime.clone(), ctx.clone());
             map.insert(txt, val);
         } else if let Result::Error(e) = txt {
             return Result::Error(e);
@@ -53,7 +53,7 @@ pub fn eval_dict(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result 
     return Result::Dict(map);
 }
 
-pub fn eval_string(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Result {
+pub fn eval_string(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -> Result {
     let mut text = String::new();
     for node in inner {
         match node.rule() {
@@ -61,7 +61,7 @@ pub fn eval_string(inner: &Vec<Node>, runtime: &Runtime, ctx: &Context) -> Resul
                 text += node.content();
             }
             Rule::Interpolation => {
-                text += eval(node.inner().first().unwrap(), runtime, ctx)
+                text += eval(node.inner().first().unwrap(), runtime.clone(), ctx.clone())
                     .to_string()
                     .as_str();
             }

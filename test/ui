@@ -24,6 +24,8 @@ ansii_styles = {
     bold: 1,
     italic: 3,
     underlined: 4,
+    framed: 51,
+    encircled: 52,
     overlined: 53
 }
 escape_sequence = "\x1b["
