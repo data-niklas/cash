@@ -1,3 +1,12 @@
-#!/home/niklas/hub/scripts/bin/cash
-a = 4
-a + (1*0) + 38
+#!/bin/env cash
+include("./ui")
+a = ()->{
+    b = "\n"
+    text = "Hello World"
+    return(()->{
+        return(b+text)
+    })
+}()
+println(a())
+
+ui::style("Text",["bold","red","italic", "overlined"])

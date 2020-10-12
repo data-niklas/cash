@@ -46,6 +46,8 @@ lazy_static! {
         //Control
         m.insert("quit", "Exits cash");
         m.insert("exit", "Exits cash");
+        m.insert("cd", "Change current dir");
+        m.insert("include", "Include another file");
         m.insert("clear", "Clears the screen");
         m.insert("cls", "Clears the screen");
         m.insert("return", "Returns from the current block and returns up to 1 result");

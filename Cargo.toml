@@ -14,6 +14,8 @@ pest_derive = "2.1.0"
 linefeed = "0.6"
 lazy_static = "1.4.0"
 rand = "0.7.3"
+dirs = "3.0"
+owning_ref = "0.4.1"
 
 [dependencies.clap]
 version = "3.0.0-beta.2"

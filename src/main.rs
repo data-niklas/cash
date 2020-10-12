@@ -13,10 +13,23 @@ mod completer;
 #[path = "lang/ast.rs"]
 mod ast;
 
+
 fn main() -> Result<()> {
     let matches = args::parse_args();
     let mut runtime = runtime::Runtime::new();
-    main_loop(&mut runtime)?;
+    if let Some(path) = matches.value_of("INPUT"){
+        run_file(&mut runtime, path)?;
+    }
+    else {
+        main_loop(&mut runtime)?;
+    }
+    Ok(())
+}
+
+fn run_file(runtime: &mut runtime::Runtime, path: &str) -> Result<()>{
+    let path = std::fs::canonicalize(std::path::Path::new(path))?;
+    std::env::set_current_dir(path.parent().unwrap())?;
+    runtime.exec_file(path.as_path())?;
     Ok(())
 }
 

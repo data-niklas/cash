@@ -1,6 +1,6 @@
-Block = { Statement ~ (Divider ~ Statement)* }
+Block = { Statement ~ (Divider ~ "\n"* ~ Statement)* }
 
-WrappedBlock = _{ "{" ~ Block ~ "}"}
+WrappedBlock = _{ "{" ~ "\n"? ~ Block ~ "\n"? ~ "}"}
 
 Statement = { Async? ~ (WhileLoop | ForLoop | Conditional | WrappedBlock | Assignment | Expr | LineComment) }
 
@@ -38,17 +38,23 @@ UnaryLOp = { "-" | "+" | "!" }
 
 UnaryROp = { "!" | "--" | "++" }
 
-Operator = { "+" | "-" | ("**") | ("//") | "*" | "/" | "%" | "^" | "==" | "<=" | ">=" | "<" | ">" | "|" }
+Operator = { "+" | "-" | ("**") | ("//") | "*" | "/" | "%" | "^" | "==" | "<=" | ">=" | "<" | ">" }
 
-Term = { Range | Literal | "(" ~ Expr ~ ")" | Call | Var  }
+Term = { Range | Literal | "(" ~ Expr ~ ")" | (Call ~ !"|") | Pipe | Var  }
+
+Pipe = { Capture? ~ Call ~ ( "|" ~ Call)* }
+
+Capture = { "capture" }
 
 Range = { (Int | Var) ~ ".." ~ (Int | Var) }
 
 Call = { Ident ~ "(" ~ Arguments? ~ ")" }
 
-Arguments = _{ Expr ~ ( "," ~ Expr)* }
+Arguments = _{ "\n"? ~ Expr ~ ( "," ~ "\n"* ~ Expr)* ~ "\n"? }
 
-Literal = { Float | Int | String | Bool | None | Array | Dict | Function }
+Literal = { Float | Int | String | Bool | None | Array | Dict | Function | Home }
+
+Home = { "~" }
 
 Function = { "(" ~ FunctionParams? ~ ")" ~ "->" ~ WrappedBlock }
 
@@ -58,9 +64,9 @@ FunctionParam = { Ident ~ OptionalMarker? }
 
 OptionalMarker = _{ "=" ~ (Literal | Var)}
 
-Dict = { "{" ~ Pairs? ~ "}" }
+Dict = { "{" ~ "\n"? ~ Pairs?  ~ "\n"? ~ "}" }
 
-Pairs = _{ Pair ~ ("," ~ Pair)* }
+Pairs = _{ Pair ~ ("," ~ "\n"* ~ Pair)* }
 
 Pair = { (Ident | String) ~ ":" ~ Expr }
 
@@ -74,7 +80,7 @@ Bool = @{ "false" | "true" }
 
 None = @{ "none" }
 
-Ident = @{ "$"? ~ ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_")* }
+Ident = @{ "$"? ~ ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" | "::" ~ !"::")* }
 
 String = ${ "\"" ~ StringContent ~ "\""}
 
@@ -86,7 +92,7 @@ Text = { (!("\"" | Interpolation | Escape) ~ ANY)+ }
 
 Interpolation = { "${" ~ Expr ~"}"}
 
-WHITESPACE = _{ " " | "\t" }
+WHITESPACE = _{ " " | "\t" | "\\\n" }
 
 LineComment = { "#" ~ (!Divider ~ ANY)* }
 

@@ -7,6 +7,8 @@ use anyhow::*;
 use linefeed::terminal::DefaultTerminal;
 use linefeed::{Interface, Signal};
 use std::sync::Arc;
+use std::io::prelude::*;
+use dirs;
 
 #[derive(Clone)]
 pub struct Runtime<'a> {
@@ -22,6 +24,7 @@ impl<'a> Runtime<'a> {
         };
         runtime.init();
         runtime.load_config();
+        runtime.load_history();
         return runtime;
     }
 
@@ -32,6 +35,20 @@ impl<'a> Runtime<'a> {
         interface.set_report_signal(Signal::Quit, true);
         interface.set_completer(Arc::new(CashCompleter));
         return Arc::new(interface);
+    }
+
+    fn load_history(&self){
+        if let Some(path) = dirs::home_dir(){
+            let path = path.join(std::path::Path::new(".cash_history"));
+            self.interface.load_history(path);
+        }
+    }
+
+    fn save_history(&self){
+        if let Some(path) = dirs::home_dir(){
+            let path = path.join(std::path::Path::new(".cash_history"));
+            self.interface.save_history(path);
+        }
     }
 
     fn init(&mut self) {
@@ -62,9 +79,16 @@ impl<'a> Runtime<'a> {
     fn load_config(&mut self) {}
 
     pub fn exec(&self, text: String) -> Result<()> {
-        let res = interpreter::interpret(text.clone(), self)?;
+        let res = interpreter::interpret(text.clone(), self, &self.basectx)?;
         res.print();
         Ok(())
+    }
+
+    pub fn exec_file(&self, path: &std::path::Path) -> Result<()> {
+        let mut file = std::fs::File::open(path)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        return self.exec(contents);
     }
 
     pub fn print_start(&self) -> Result<()> {
@@ -94,7 +118,7 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn quit(&self) {
-        //Cleanup
+        self.save_history();
         std::process::exit(0);
     }
 

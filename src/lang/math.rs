@@ -15,6 +15,7 @@ pub fn negate(input: Result) -> Result{
     }
 }
 
+
 pub fn compare(lhs: &Result, rhs: &Result) -> Result{
     if let Result::Int(i1) = lhs {
         if let Result::Int(i2) = rhs {
@@ -69,6 +70,7 @@ pub fn compare(lhs: &Result, rhs: &Result) -> Result{
     }
 }
 
+
 pub fn compare_int(value1: &i64, value2: &i64) -> i64{
     if value1 == value2 {
         return 0;
@@ -81,6 +83,7 @@ pub fn compare_int(value1: &i64, value2: &i64) -> i64{
     }
 }
 
+
 pub fn compare_float(value1: &f64, value2: &f64) -> i64{
     if value1 == value2 {
         return 0;
@@ -92,6 +95,7 @@ pub fn compare_float(value1: &f64, value2: &f64) -> i64{
         return 1;
     }
 }
+
 
 pub fn compare_bool(value1: &bool, value2: &bool) -> i64{
     if value1 == value2 {
@@ -116,6 +120,7 @@ pub fn compare_string(value1: &String, value2: &String) -> i64{
         return 1;
     }
 }
+
 
 pub fn compare_array(a1: &Vec<Result>, a2: &Vec<Result>) -> Result{
     if a1.len() == a2.len(){
