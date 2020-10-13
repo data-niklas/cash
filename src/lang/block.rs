@@ -66,8 +66,15 @@ pub fn eval_forloop(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>)
             newctx.set_own_var(varname, i);
             eval(block, runtime.clone(), Arc::new(newctx));
         }
-    } else {
-        return Result::Error("For loop can only loop over arrays".to_string());
+    } else if let Result::Range{start,end} = range {
+        let block = iter.next().unwrap();
+        for i in start..end {
+            let newctx = Context::from_parent(&*ctx, ctx.me());
+            newctx.set_own_var(varname, Result::Int(i as i64));
+            eval(block, runtime.clone(), Arc::new(newctx));
+        }
+    }  else {
+        return Result::Error("For loop can only loop over arrays and ranges".to_string());
     }
     return Result::None;
 }

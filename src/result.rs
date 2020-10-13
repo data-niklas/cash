@@ -23,6 +23,10 @@ pub enum Result{
         parameters: Vec<Parameter>,
         vars: HashMap<String, Result>
     },
+    Range{
+        start: usize,
+        end: usize,
+    },
     Bool(bool),
     Int(i64),
     Float(f64)
@@ -54,6 +58,12 @@ impl Result{
             Result::Dict(_) => {
                 return "dict".to_string();
             }
+            Result::Function{block:_,parameters:_,vars:_} => {
+                return "function".to_string();
+            }
+            Result::Range{start:_,end:_} => {
+                return "range".to_string();
+            }
             Result::None | _ => {
                 return "none".to_string();
             }
@@ -61,30 +71,7 @@ impl Result{
     }
 
     pub fn print(&self){
-        match self {
-            Result::Bool(txt) => {
-                println!("{}", txt);
-            }
-            Result::String(txt) => {
-                println!("{}", txt);
-            }
-            Result::Int(txt) => {
-                println!("{}", txt);
-            }
-            Result::Float(txt) => {
-                println!("{}", txt);
-            }
-            Result::Array(_) => {
-                println!("{}", self.to_string());
-            }
-            Result::Dict(_) => {
-                println!("{}", self.to_string());
-            }
-            Result::Error(e) => {
-                println!("\x1b[1;31mError:\x1b[0;31m {}\x1b[0m", e);
-            }
-            _ => {}
-        }
+        println!("{}",self.to_string());
     }
 
     pub fn to_string(&self) -> String{
@@ -116,6 +103,20 @@ impl Result{
                 txt += " }";
                 return "{".to_string() + &txt[1..];
             }
+            Result::Function{block:_,parameters,vars:_} => {
+                let mut txt = String::new();
+                for param in parameters{
+                    txt += ", ";
+                    txt += &param.name;
+                }
+                if parameters.len() > 0{
+                    txt.replace_range(0..2, "");
+                }
+                return "( ".to_string() + &txt + " )->{}";
+            }
+            Result::Range{start,end}=>{
+                return start.to_string() + ".." + &end.to_string();
+            }
             Result::Float(txt) => {
                 return txt.to_string();
             }
@@ -125,10 +126,4 @@ impl Result{
             _ => {return "".to_string();}
         }
     }
-}
-
-#[derive(Debug)]
-pub enum ExprResult<'a>{
-    Result(Result),
-    Node(&'a Node)
 }

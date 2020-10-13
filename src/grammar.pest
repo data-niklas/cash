@@ -44,7 +44,7 @@ Term = { Range | Literal | "(" ~ Expr ~ ")" | (Call ~ !"|") | Pipe | Var  }
 
 Pipe = { Capture? ~ Call ~ ( "|" ~ Call)* }
 
-Capture = { "capture" }
+Capture = { "$" }
 
 Range = { (Int | Var) ~ ".." ~ (Int | Var) }
 
@@ -52,7 +52,7 @@ Call = { Ident ~ "(" ~ Arguments? ~ ")" }
 
 Arguments = _{ "\n"? ~ Expr ~ ( "," ~ "\n"* ~ Expr)* ~ "\n"? }
 
-Literal = { Float | Int | String | Bool | None | Array | Dict | Function | Home }
+Literal = { Float | Int | String | Bool | None | Array | Dict | Function }
 
 Home = { "~" }
 
@@ -84,7 +84,7 @@ Ident = @{ "$"? ~ ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" | "::" ~ !"::")* }
 
 String = ${ "\"" ~ StringContent ~ "\""}
 
-StringContent = _{ ( Interpolation | Escape | Text)* }
+StringContent = _{ Home? ~ ( Interpolation | Escape | Text)* }
 
 Escape = { "\\" ~ (("x" ~ ASCII_HEX_DIGIT{1,4}) | ANY) }
 

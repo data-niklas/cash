@@ -2,7 +2,7 @@ use super::*;
 use crate::ast::Node;
 use crate::context::Context;
 use crate::interpreter::Rule;
-use crate::result::{Parameter, Result};
+use crate::result::Result;
 use crate::runtime::Runtime;
 use std::collections::HashMap;
 
@@ -19,11 +19,10 @@ pub fn eval_range(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) -
     let mut iter = inner.iter();
     if let Result::Int(i1) = eval(iter.next().unwrap(), runtime.clone(), ctx.clone()) {
         if let Result::Int(i2) = eval(iter.next().unwrap(), runtime, ctx) {
-            let mut vec: Vec<Result> = Vec::new();
-            for i in i1..i2 {
-                vec.push(Result::Int(i));
-            }
-            return Result::Array(vec);
+            return Result::Range{
+                start: i1 as usize,
+                end: i2 as usize
+            };
         }
     }
     return Result::Error("Range may only include ints".to_string());
@@ -57,6 +56,11 @@ pub fn eval_string(inner: &Vec<Node>, runtime: Arc<Runtime>, ctx: Arc<Context>) 
     let mut text = String::new();
     for node in inner {
         match node.rule() {
+            Rule::Home => {
+                if let Result::String(home) = get_home(){
+                    text += home.as_str();
+                }
+            }
             Rule::Text => {
                 text += node.content();
             }
